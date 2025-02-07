@@ -117,144 +117,149 @@ A comprehensive court booking management system designed for court owners to man
 
 ## Database Schema
 
-### Users
+erDiagram
+OWNERS ||--o{ VENUES : owns
+VENUES ||--o{ COURTS : contains
+SPORT_TYPES ||--o{ COURTS : categorizes
+COURTS ||--o{ COURT_PRICING : has
+TIME_SLOTS ||--o{ COURT_PRICING : defines
+COURTS ||--o{ BOOKINGS : receives
+CUSTOMERS ||--o{ BOOKINGS : makes
+HOLIDAYS }o--o{ COURT_PRICING : affects
 
-```sql
-model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  name          String
-  role          UserRole  @default(COURT_OWNER)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  courts        Court[]
-  bookings      Booking[]
-}
+    OWNERS {
+        UUID id PK
+        VARCHAR name
+        VARCHAR email
+        VARCHAR phone
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
 
-enum UserRole {
-  SYSTEM_ADMIN
-  COURT_OWNER
-}
-```
+    VENUES {
+        UUID id PK
+        UUID owner_id FK
+        VARCHAR name
+        TEXT address
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
 
-### Courts
+    SPORT_TYPES {
+        UUID id PK
+        VARCHAR name
+    }
 
-```sql
-model Court {
-  id              String        @id @default(uuid())
-  name            String
-  type            CourtType
-  hourlyRate      Decimal       @db.Decimal(10, 2)
-  description     String?
-  imageUrl        String?
-  operatingHours  Json          // Store as { open: "09:00", close: "22:00" }
-  maintenanceDay  DayOfWeek?
-  ownerId         String
-  owner           User          @relation(fields: [ownerId], references: [id])
-  bookings        Booking[]
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+    COURTS {
+        UUID id PK
+        UUID venue_id FK
+        UUID sport_type_id FK
+        VARCHAR name
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
 
-  @@index([ownerId])
-}
+    TIME_SLOTS {
+        UUID id PK
+        TIME start_time
+        TIME end_time
+        VARCHAR name
+    }
 
-enum CourtType {
-  TENNIS
-  BADMINTON
-  SQUASH
-  BASKETBALL
-}
+    COURT_PRICING {
+        UUID id PK
+        UUID court_id FK
+        UUID time_slot_id FK
+        ENUM day_type
+        DECIMAL rate
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
 
-enum DayOfWeek {
-  MONDAY
-  TUESDAY
-  WEDNESDAY
-  THURSDAY
-  FRIDAY
-  SATURDAY
-  SUNDAY
-}
-```
+    CUSTOMERS {
+        UUID id PK
+        VARCHAR name
+        VARCHAR email
+        VARCHAR phone
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
 
-### Bookings
+    BOOKINGS {
+        UUID id PK
+        UUID court_id FK
+        UUID customer_id FK
+        TIMESTAMP start_time
+        TIMESTAMP end_time
+        ENUM booking_status
+        ENUM payment_status
+        DECIMAL total_amount
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
 
-```sql
-model Booking {
-  id          String        @id @default(uuid())
-  startTime   DateTime
-  endTime     DateTime
-  status      BookingStatus @default(CONFIRMED)
-  totalAmount Decimal       @db.Decimal(10, 2)
-  courtId     String
-  court       Court         @relation(fields: [courtId], references: [id])
-  userId      String
-  user        User          @relation(fields: [userId], references: [id])
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+    HOLIDAYS {
+        UUID id PK
+        DATE date
+        VARCHAR name
+        TIMESTAMP created_at
+    }
 
-  @@index([courtId])
-  @@index([userId])
-}
-
-enum BookingStatus {
-  PENDING
-  CONFIRMED
-  CANCELLED
-  COMPLETED
-}
 ```
 
 ## Project Structure
 
 ```
+
 ├── src/
-│   ├── app/
-│   │   ├── (auth)/
-│   │   │   ├── login/
-│   │   │   └── register/
-│   │   ├── (dashboard)/
-│   │   │   ├── courts/
-│   │   │   ├── bookings/
-│   │   │   └── reports/
-│   │   ├── api/
-│   │   │   ├── courts/
-│   │   │   ├── bookings/
-│   │   │   └── reports/
-│   │   └── layout.tsx
-│   ├── components/
-│   │   ├── ui/
-│   │   │   ├── Button.tsx
-│   │   │   ├── Input.tsx
-│   │   │   └── ...
-│   │   ├── courts/
-│   │   │   ├── CourtCard.tsx
-│   │   │   ├── CourtForm.tsx
-│   │   │   └── ...
-│   │   ├── bookings/
-│   │   │   ├── BookingCalendar.tsx
-│   │   │   ├── BookingForm.tsx
-│   │   │   └── ...
-│   │   └── reports/
-│   │       ├── RevenueChart.tsx
-│   │       └── ...
-│   ├── lib/
-│   │   ├── prisma.ts
-│   │   ├── supabase.ts
-│   │   └── utils.ts
-│   ├── hooks/
-│   │   ├── useAuth.ts
-│   │   ├── useCourts.ts
-│   │   └── useBookings.ts
-│   └── types/
-│       └── index.ts
+│ ├── app/
+│ │ ├── (auth)/
+│ │ │ ├── login/
+│ │ │ └── register/
+│ │ ├── (dashboard)/
+│ │ │ ├── courts/
+│ │ │ ├── bookings/
+│ │ │ └── reports/
+│ │ ├── api/
+│ │ │ ├── courts/
+│ │ │ ├── bookings/
+│ │ │ └── reports/
+│ │ └── layout.tsx
+│ ├── components/
+│ │ ├── ui/
+│ │ │ ├── Button.tsx
+│ │ │ ├── Input.tsx
+│ │ │ └── ...
+│ │ ├── courts/
+│ │ │ ├── CourtCard.tsx
+│ │ │ ├── CourtForm.tsx
+│ │ │ └── ...
+│ │ ├── bookings/
+│ │ │ ├── BookingCalendar.tsx
+│ │ │ ├── BookingForm.tsx
+│ │ │ └── ...
+│ │ └── reports/
+│ │ ├── RevenueChart.tsx
+│ │ └── ...
+│ ├── lib/
+│ │ ├── prisma.ts
+│ │ ├── supabase.ts
+│ │ └── utils.ts
+│ ├── hooks/
+│ │ ├── useAuth.ts
+│ │ ├── useCourts.ts
+│ │ └── useBookings.ts
+│ └── types/
+│ └── index.ts
 ├── prisma/
-│   └── schema.prisma
+│ └── schema.prisma
 ├── public/
-│   ├── images/
-│   └── icons/
+│ ├── images/
+│ └── icons/
 ├── .env
 ├── package.json
 └── tsconfig.json
+
 ```
 
 ### Directory Structure Explanation
@@ -300,3 +305,4 @@ This structure follows the feature-first organization principle, making it easy 
 - Scale the application
 - Maintain separation of concerns
 - Share components and utilities across features
+```

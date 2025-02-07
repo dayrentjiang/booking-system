@@ -33,17 +33,16 @@ export default function OwnerLayout({
       {/* Overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-gray-600 bg-opacity-75 transition-opacity lg:hidden z-40"
+          className="fixed inset-0 bg-gray-600 bg-opacity-75 transition-opacity lg:hidden z-20"
           onClick={() => setSidebarOpen(false)}
-          aria-hidden="true"
         />
       )}
 
       {/* Sidebar */}
       <div
         className={`
-          fixed inset-y-0 left-0 z-50 transform lg:relative lg:z-0
-          transition duration-300 ease-in-out w-64
+          fixed inset-y-0 left-0 z-30 transform lg:relative
+          transition duration-300 ease-in-out
           ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           }
@@ -55,7 +54,9 @@ export default function OwnerLayout({
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <TopBar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-6 ml-12 mr-12">
+          {children}
+        </main>
       </div>
     </div>
   );

@@ -1,5 +1,7 @@
-import { Menu, User } from "lucide-react";
+"use client";
 
+import { Menu } from "lucide-react";
+import { UserButton } from "@clerk/nextjs";
 interface TopBarProps {
   onMenuClick: () => void;
 }
@@ -13,7 +15,7 @@ export function TopBar({ onMenuClick }: TopBarProps) {
       <div></div>
       <div className="flex items-center gap-4">
         <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-          <User size={24} />
+          <UserButton />
         </div>
       </div>
     </div>
