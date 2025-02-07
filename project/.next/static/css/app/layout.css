@@ -753,8 +753,14 @@ select {
 .mb-1 {
   margin-bottom: 0.25rem;
 }
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
 .mb-4 {
   margin-bottom: 1rem;
+}
+.mb-6 {
+  margin-bottom: 1.5rem;
 }
 .mb-8 {
   margin-bottom: 2rem;
@@ -770,12 +776,6 @@ select {
 }
 .mt-4 {
   margin-top: 1rem;
-}
-.mb-2 {
-  margin-bottom: 0.5rem;
-}
-.mb-6 {
-  margin-bottom: 1.5rem;
 }
 .flex {
   display: flex;
@@ -816,11 +816,11 @@ select {
 .w-\[14\.28\%\] {
   width: 14.28%;
 }
-.w-full {
-  width: 100%;
-}
 .w-\[350px\] {
   width: 350px;
+}
+.w-full {
+  width: 100%;
 }
 .max-w-lg {
   max-width: 32rem;

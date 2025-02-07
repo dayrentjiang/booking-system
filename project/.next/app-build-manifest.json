@@ -11,16 +11,6 @@
       "static/chunks/main-app.js",
       "static/chunks/app/owner/layout.js"
     ],
-    "/owner/courts/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/owner/courts/page.js"
-    ],
-    "/owner/bookings/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/owner/bookings/page.js"
-    ],
     "/owner/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -30,11 +20,6 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/page.js"
-    ],
-    "/sign-in/[[...sign-in]]/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/sign-in/[[...sign-in]]/page.js"
     ],
     "/_not-found/page": [
       "static/chunks/webpack.js",
