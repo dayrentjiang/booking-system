@@ -37,8 +37,8 @@ const CourtsPage = (props: { venues: Venue[] }) => {
         address: formData.address
       });
 
+      // Optionally refresh the venues list or add the new venue to the state
       if (newVenue) {
-        // Optionally refresh the venues list or add the new venue to the state
         setVenues((prevVenues) => [...prevVenues, newVenue]);
       }
     } catch (error) {
@@ -60,15 +60,18 @@ const CourtsPage = (props: { venues: Venue[] }) => {
         </Button>
       </div>
 
+      {venues.length === 0 && (
+        <div className="bg-white p-6 rounded-lg shadow-sm text-center">
+          <p className="text-gray-500">No venues added yet</p>
+        </div>
+      )}
+
       <div className="space-y-6">
         {venues.map((venue) => (
           <VenueCard
             key={venue.id}
             venue={venue}
             // courts={courts.filter((court) => court.venue_id === venue.id)}
-            onAddCourt={() => {
-              /* Add court handler */
-            }}
           />
         ))}
       </div>

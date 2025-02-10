@@ -8,17 +8,17 @@ import { addCourtAction } from "@/actions/courtAction/addCourtAction";
 import { getSportType } from "@/actions/courtAction/getSportType";
 import CourtCard from "@/components/courts/CourtCard";
 import React from "react";
-import { AddCourtDialog } from "./AddCourtDialog";
+import AddCourtDialog from "@/components/courts/AddCourtDialog";
 
 import { Venue, Court } from "@/types/types";
 import { add } from "date-fns";
+import { revalidatePath } from "next/cache";
 
 interface VenueCardProps {
   venue: Venue;
-  onAddCourt: (venueId: string) => void;
 }
 
-export const VenueCard = ({ venue, onAddCourt }: VenueCardProps) => {
+export const VenueCard = ({ venue }: VenueCardProps) => {
   const [courts, setCourts] = useState<any[]>([]);
   const [sportTypes, setSportTypes] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,9 +49,13 @@ export const VenueCard = ({ venue, onAddCourt }: VenueCardProps) => {
   }, [venue.id]);
 
   // Add this handler
-  const handleAddCourt = async (formData) => {
+  const handleAddCourt = async (formData: any) => {
     console.log(formData);
-    addCourtAction(formData);
+    await addCourtAction(formData);
+
+    // Optionally refresh the courts list or add the new court to the state
+    window.location.reload();
+    setCourts((prevCourts) => [...prevCourts, formData]);
   };
 
   return (
@@ -82,9 +86,11 @@ export const VenueCard = ({ venue, onAddCourt }: VenueCardProps) => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {courts.length === 0 ? (
-              <p className="text-gray-500">No courts found for this venue</p>
+              <p className="text-gray-500">No courts yet for this venue</p>
             ) : (
-              courts.map((court) => <CourtCard key={court.id} court={court} />)
+              courts.map((court, index) => (
+                <CourtCard key={court.id || `court-${index}`} court={court} />
+              ))
             )}
           </div>
         )}

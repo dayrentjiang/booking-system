@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Trash2, Plus } from "lucide-react";
 import { sport_type, time_slot } from "@/types/types";
+import TimeSlotInput from "./TimeSlotInput"; // Import the TimeSlotInput component
 
 interface PricingSchedule {
   [key: string]: time_slot[];
@@ -52,8 +53,8 @@ export const AddCourtDialog = ({
   const addTimeSlot = (scheduleType: "weekday" | "weekend") => {
     const newSlot: time_slot = {
       id: crypto.randomUUID(),
-      start_time: "",
-      end_time: "",
+      start_time: "00:00",
+      end_time: "00:00",
       rate: ""
     };
 
@@ -141,40 +142,11 @@ export const AddCourtDialog = ({
       <div className="space-y-4">
         {slots.map((slot) => (
           <div key={slot.id} className="flex gap-4 items-start">
-            <div className="grid grid-cols-3 gap-4 flex-1">
-              <div>
-                <Label>Start Time</Label>
-                <Input
-                  type="time"
-                  value={slot.start_time}
-                  onChange={(e) =>
-                    updateTimeSlot(type, slot.id, "start_time", e.target.value)
-                  }
-                />
-              </div>
-              <div>
-                <Label>End Time</Label>
-                <Input
-                  type="time"
-                  value={slot.end_time}
-                  onChange={(e) =>
-                    updateTimeSlot(type, slot.id, "end_time", e.target.value)
-                  }
-                />
-              </div>
-              <div>
-                <Label>Price per Hour</Label>
-                <Input
-                  type="number"
-                  value={slot.rate}
-                  onChange={(e) =>
-                    updateTimeSlot(type, slot.id, "rate", e.target.value)
-                  }
-                  placeholder="Price per hour"
-                  step="any"
-                />
-              </div>
-            </div>
+            <TimeSlotInput
+              slot={slot}
+              type={type}
+              updateTimeSlot={updateTimeSlot}
+            />
             <Button
               type="button"
               variant="ghost"
@@ -270,3 +242,5 @@ export const AddCourtDialog = ({
     </Dialog>
   );
 };
+
+export default AddCourtDialog;

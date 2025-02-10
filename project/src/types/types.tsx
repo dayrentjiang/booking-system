@@ -23,6 +23,7 @@ export interface Court {
   name: string;
   created_at: string;
   updated_at: string;
+  is_active: boolean;
 }
 
 export interface court_pricing {
@@ -30,7 +31,7 @@ export interface court_pricing {
   court_id: string;
   //enum
   day_type: ["weekday", "weekend", "holiday"];
-  rate: number;
+  rate: string;
   start_time: string;
   end_time: string;
   created_at: string;

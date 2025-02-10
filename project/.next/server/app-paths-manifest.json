@@ -1,4 +1,4 @@
 {
-  "/owner/[userId]/courts/page": "app/owner/[userId]/courts/page.js",
-  "/owner/[userId]/bookings/page": "app/owner/[userId]/bookings/page.js"
+  "/owner/[userId]/page": "app/owner/[userId]/page.js",
+  "/owner/[userId]/courts/page": "app/owner/[userId]/courts/page.js"
 }
