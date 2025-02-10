@@ -1,6 +1,8 @@
 "use client";
 
 import { Calendar, DollarSign, Users } from "lucide-react";
+import { User } from "@/types/types";
+import { useEffect, useState } from "react";
 
 interface StatCardProps {
   icon: React.ReactNode;
@@ -40,7 +42,10 @@ const UpcomingBooking = ({ time, court, customer }: UpcomingBookingProps) => (
   </div>
 );
 
-export function DashboardOverview() {
+export function DashboardOverview(props: { user: any }) {
+  const { user } = props;
+  const [owner, setOwner] = useState(user);
+
   // This would normally come from an API or database
   const upcomingBookings = [
     { time: "09:00 AM", court: "Court 1", customer: "John Doe" },
@@ -48,12 +53,16 @@ export function DashboardOverview() {
     { time: "02:00 PM", court: "Court 1", customer: "Mike Johnson" }
   ];
 
+  useEffect(() => {
+    console.log(owner);
+  }, []);
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Dashboard Overview</h1>
         <p className="text-gray-600">
-          Welcome back! Here's what's happening today.
+          Welcome back {owner.name}! Here's what's happening today.
         </p>
       </div>
 

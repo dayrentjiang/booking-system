@@ -15,7 +15,7 @@ export default clerkMiddleware(async (auth, req) => {
 
   // ✅ Redirect signed-in users from "/" or "/sign-in" to "/owner"
   if (userId && isPublicRoute(req)) {
-    return NextResponse.redirect(new URL("/owner", req.url));
+    return NextResponse.redirect(new URL(`/owner/${userId}`, req.url));
   }
 });
 

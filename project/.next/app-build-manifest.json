@@ -6,25 +6,25 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/owner/layout": [
+    "/owner/[userId]/layout": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/owner/layout.js"
+      "static/chunks/app/owner/[userId]/layout.js"
     ],
-    "/owner/page": [
+    "/owner/[userId]/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/owner/page.js"
+      "static/chunks/app/owner/[userId]/page.js"
     ],
-    "/page": [
+    "/owner/[userId]/bookings/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/page.js"
+      "static/chunks/app/owner/[userId]/bookings/page.js"
     ],
-    "/_not-found/page": [
+    "/owner/[userId]/courts/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/_not-found/page.js"
+      "static/chunks/app/owner/[userId]/courts/page.js"
     ]
   }
 }
