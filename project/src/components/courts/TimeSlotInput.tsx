@@ -17,6 +17,16 @@ const hours = Array.from({ length: 24 }, (_, i) =>
 // Generate minutes in 15-minute increments
 const minutes = ["00", "15", "30", "45"];
 
+// Define currency options
+const CURRENCIES = [
+  { code: "USD", symbol: "$", name: "US Dollar" },
+  { code: "AUD", symbol: "A$", name: "Australian Dollar" },
+  { code: "IDR", symbol: "Rp", name: "Indonesian Rupiah" },
+  { code: "EUR", symbol: "€", name: "Euro" },
+  { code: "GBP", symbol: "£", name: "British Pound" },
+  { code: "SGD", symbol: "S$", name: "Singapore Dollar" }
+];
+
 const TimeSlotInput = ({
   slot,
   type,
@@ -31,7 +41,18 @@ const TimeSlotInput = ({
     value: string
   ) => void;
 }) => {
-  const [localRate, setLocalRate] = useState(slot.rate);
+  // Parse initial rate to separate currency and amounts
+  const parseRate = (rateString: string) => {
+    if (!rateString) return { currency: "USD", amounts: "" };
+    const parts = rateString.split(" ");
+    const currency = CURRENCIES.find((c) => c.code === parts[0])?.code || "USD";
+    const amounts = parts[1] || "";
+    return { currency, amounts };
+  };
+
+  const initialRate = parseRate(slot.rate);
+  const [currency, setCurrency] = useState(initialRate.currency);
+  const [amounts, setAmounts] = useState(initialRate.amounts);
 
   // Split time into hours and minutes
   const splitTime = (time: string) => {
@@ -44,14 +65,23 @@ const TimeSlotInput = ({
     return `${hour}:${minute}`;
   };
 
-  // Update price input to handle multiple values
+  // Handle price input changes
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setLocalRate(value);
+    setAmounts(e.target.value);
   };
 
+  // Handle currency changes
+  const handleCurrencyChange = (newCurrency: string) => {
+    setCurrency(newCurrency);
+    // Update the combined rate immediately
+    const combinedRate = `${newCurrency} ${amounts}`;
+    updateTimeSlot(type, slot.id, "rate", combinedRate);
+  };
+
+  // Handle price blur - combine currency and amounts
   const handlePriceBlur = () => {
-    updateTimeSlot(type, slot.id, "rate", localRate);
+    const combinedRate = `${currency} ${amounts}`;
+    updateTimeSlot(type, slot.id, "rate", combinedRate);
   };
 
   const { hour: startHour, minute: startMinute } = splitTime(
@@ -154,14 +184,32 @@ const TimeSlotInput = ({
       {/* Price per Hour Input */}
       <div className="space-y-2">
         <Label>Price per Hour</Label>
-        <Input
-          type="text"
-          value={localRate}
-          onChange={handlePriceChange}
-          onBlur={handlePriceBlur}
-          placeholder="Enter prices (comma-separated)"
-          className="w-full"
-        />
+        <div className="flex space-x-2">
+          <div className="w-1/3">
+            <Select value={currency} onValueChange={handleCurrencyChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="$" />
+              </SelectTrigger>
+              <SelectContent>
+                {CURRENCIES.map((curr) => (
+                  <SelectItem key={curr.code} value={curr.code}>
+                    {curr.symbol} ({curr.code})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex-1">
+            <Input
+              type="text"
+              value={amounts}
+              onChange={handlePriceChange}
+              onBlur={handlePriceBlur}
+              placeholder="Enter prices (comma-separated)"
+              className="w-full"
+            />
+          </div>
+        </div>
         <div className="text-xs text-gray-500">
           Tip: Enter multiple prices separated by commas
         </div>

@@ -41,6 +41,7 @@ const CourtsPage = (props: { venues: Venue[] }) => {
       if (newVenue) {
         setVenues((prevVenues) => [...prevVenues, newVenue]);
       }
+      window.location.reload();
     } catch (error) {
       console.error("Error adding venue:", error);
       // Optionally show an error message to the user

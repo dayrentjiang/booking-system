@@ -45,9 +45,7 @@ export const AddCourtDialog = ({
     pricing: {
       weekday: [] as time_slot[],
       weekend: [] as time_slot[]
-    },
-    hasRacketRental: false,
-    racketRentalPrice: ""
+    }
   });
 
   const addTimeSlot = (scheduleType: "weekday" | "weekend") => {
@@ -110,9 +108,7 @@ export const AddCourtDialog = ({
       pricing: {
         weekday: [] as time_slot[],
         weekend: [] as time_slot[]
-      },
-      hasRacketRental: false,
-      racketRentalPrice: ""
+      }
     });
   };
 
@@ -204,35 +200,6 @@ export const AddCourtDialog = ({
 
           <TimeSlotSection type="weekday" slots={formData.pricing.weekday} />
           <TimeSlotSection type="weekend" slots={formData.pricing.weekend} />
-
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Switch
-                checked={formData.hasRacketRental}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, hasRacketRental: checked })
-                }
-              />
-              <Label>Enable Racket Rental</Label>
-            </div>
-
-            {formData.hasRacketRental && (
-              <div className="w-48">
-                <Label>Racket Rental Price (per hour)</Label>
-                <Input
-                  type="number"
-                  value={formData.racketRentalPrice}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      racketRentalPrice: e.target.value
-                    })
-                  }
-                  placeholder="Rental price per hour"
-                />
-              </div>
-            )}
-          </div>
 
           <Button type="submit" className="w-full">
             Add Court

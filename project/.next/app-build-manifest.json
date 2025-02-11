@@ -11,20 +11,15 @@
       "static/chunks/main-app.js",
       "static/chunks/app/owner/[userId]/layout.js"
     ],
-    "/owner/[userId]/page": [
+    "/owner/[userId]/courts/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/owner/[userId]/page.js"
+      "static/chunks/app/owner/[userId]/courts/page.js"
     ],
     "/owner/[userId]/bookings/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/owner/[userId]/bookings/page.js"
-    ],
-    "/owner/[userId]/courts/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/owner/[userId]/courts/page.js"
     ]
   }
 }
