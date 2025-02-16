@@ -49,3 +49,25 @@ export interface time_slot {
   end_time: string;
   rate: string;
 }
+
+export interface Booking {
+  id: string;
+  customer_id: string;
+  court_id: string;
+  start_time: string;
+  end_time: string;
+  created_at: string;
+  updated_at: string;
+  booking_status: ["pending", "confirmed", "cancelled"];
+  payment_status: ["pending", "confirmed", "refunded"];
+  total_amount: number;
+}
+
+export interface customer {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  created_at: string;
+  updated_at: string;
+}

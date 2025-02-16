@@ -1,295 +1,223 @@
 "use client";
 
-import React from "react";
-import { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import BookingManagementPage from "@/components/bookings/BookingManagementPage";
+import CalendarView from "@/components/bookings/CalenderView";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { CalendarDays, List, Plus, Filter } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { getVenuesWithCourt } from "@/actions/bookingAction/getVenuesWithCourt";
+import { useParams } from "next/navigation";
+import AddBookingDialog from "@/components/bookings/AddBookingDialog";
 
-// Time slots from 8 AM to 8 PM in hourly intervals
-const timeSlots = Array.from({ length: 13 }, (_, i) => {
-  const hour = i + 8;
-  return `${hour.toString().padStart(2, "0")}:00`;
-});
+// Define types for better type safety
+interface Court {
+  id: string;
+  name: string;
+}
 
-const days = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-  "Sunday"
-];
+interface Venue {
+  id: string;
+  name: string;
+  courts: Court[];
+}
 
-// Updated dummy bookings data with duration
-const dummyBookings = [
-  {
-    court: "Court 1",
-    day: "Monday",
-    startTime: "10:00",
-    duration: 2,
-    customer: "John Doe",
-    email: "john@example.com",
-    phone: "123-456-7890"
-  },
-  {
-    court: "Court 2",
-    day: "Monday",
-    startTime: "14:00",
-    duration: 2,
-    customer: "Jane Smith",
-    email: "jane@example.com",
-    phone: "123-456-7891"
-  },
-  {
-    court: "Court 1",
-    day: "Tuesday",
-    startTime: "09:00",
-    duration: 2,
-    customer: "Mike Johnson",
-    email: "mike@example.com",
-    phone: "123-456-7892"
-  },
-  {
-    court: "Court 3",
-    day: "Wednesday",
-    startTime: "16:00",
-    duration: 2,
-    customer: "Sarah Wilson",
-    email: "sarah@example.com",
-    phone: "123-456-7893"
-  },
-  {
-    court: "Court 2",
-    day: "Thursday",
-    startTime: "11:00",
-    duration: 2,
-    customer: "Tom Brown",
-    email: "tom@example.com",
-    phone: "123-456-7894"
-  },
-  {
-    court: "Court 1",
-    day: "Friday",
-    startTime: "15:00",
-    duration: 2,
-    customer: "Emily Davis",
-    email: "emily@example.com",
-    phone: "123-456-7895"
-  }
-];
+function MainBookingPage() {
+  // Get userId from URL and provide a type-safe fallback
+  const params = useParams();
+  const userId = params?.userId as string;
 
-const CourtTimetable = ({
-  courtName,
-  onBookingClick
-}: {
-  courtName: string;
-  onBookingClick: (booking: any) => void;
-}) => {
-  // Helper function to check if a slot is part of a booking
-  const getBookingForSlot = (day: string, time: string) => {
-    return dummyBookings.find((booking) => {
-      if (booking.court !== courtName || booking.day !== day) return false;
+  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
+  const [selectedVenue, setSelectedVenue] = useState<string>("");
+  const [selectedCourt, setSelectedCourt] = useState<string>("");
+  const [venuesDatas, setVenuesDatas] = useState<Venue[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-      const [bookingHour] = booking.startTime.split(":").map(Number);
-      const [slotHour] = time.split(":").map(Number);
+  // Get currently selected venue object
+  const currentVenue = venuesDatas.find((venue) => venue.id === selectedVenue);
 
-      const bookingStartHour = bookingHour;
-      const bookingEndHour = bookingHour + booking.duration;
-
-      return slotHour >= bookingStartHour && slotHour < bookingEndHour;
-    });
+  // Handle venue change
+  const handleVenueChange = (venueId: string) => {
+    setSelectedVenue(venueId);
+    const venue = venuesDatas.find((v) => v.id === venueId);
+    if (venue?.courts && venue.courts.length > 0) {
+      setSelectedCourt(venue.courts[0].id);
+    }
   };
 
-  return (
-    <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-      <div className="p-6 border-b border-gray-200">
-        <h2 className="text-xl font-semibold text-gray-800">{courtName}</h2>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-gray-50">
-              <th className="sticky left-0 z-10 bg-gray-50 w-20 px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-r border-gray-200">
-                Time
-              </th>
-              {days.map((day, index) => (
-                <th
-                  key={day}
-                  className={`w-[14.28%] px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider border-b ${
-                    index < days.length - 1 ? "border-r border-gray-200" : ""
-                  }`}
-                >
-                  {day}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {timeSlots.map((time, timeIndex) => (
-              <tr
-                key={`${courtName}-${time}-${timeIndex}`}
-                className="hover:bg-gray-50"
-              >
-                <td className="sticky left-0 z-10 bg-white w-20 px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap border-r border-gray-200">
-                  {time}
-                </td>
-                {days.map((day, dayIndex) => {
-                  const booking = getBookingForSlot(day, time);
-                  const isFirstSlotOfBooking = booking?.startTime === time;
+  // Fetch venues data
+  useEffect(() => {
+    const fetchVenuesData = async () => {
+      if (!userId) {
+        setError("No user ID provided");
+        setIsLoading(false);
+        return;
+      }
 
-                  return (
-                    <td
-                      key={`${courtName}-${day}-${time}-${dayIndex}`}
-                      className={`w-[14.28%] px-3 py-3 relative group transition-colors duration-150 
-                        ${
-                          booking
-                            ? "bg-blue-50 hover:bg-blue-100"
-                            : "hover:bg-gray-100 cursor-pointer"
-                        }
-                        ${
-                          dayIndex < days.length - 1
-                            ? "border-r border-gray-200"
-                            : ""
-                        }
-                      `}
-                      onClick={() => booking && onBookingClick(booking)}
-                    >
-                      {isFirstSlotOfBooking && (
-                        <div
-                          className={`
-                          absolute inset-0 m-1 rounded-md
-                          ${
-                            booking
-                              ? "bg-blue-100 group-hover:bg-blue-200 shadow-sm"
-                              : ""
-                          }
-                          transition-all duration-150 ease-in-out
-                          flex flex-col items-center justify-center
-                        `}
-                        >
-                          <div className="font-medium text-blue-800 truncate text-sm px-1">
-                            {booking.customer}
-                          </div>
-                          <div className="text-xs text-blue-600 font-medium">
-                            {booking.duration}h
-                          </div>
-                        </div>
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-};
+      try {
+        setIsLoading(true);
+        setError(null);
+        const data = await getVenuesWithCourt(userId);
 
-export default function BookingsPage() {
-  const courts = ["Court 1", "Court 2", "Court 3"];
-  const [selectedBooking, setSelectedBooking] = useState<any>(null);
+        if (!data || data.length === 0) {
+          setError("No venues found");
+          return;
+        }
+
+        setVenuesDatas(data);
+        setSelectedVenue(data[0].id);
+        if (data[0].courts?.length > 0) {
+          setSelectedCourt(data[0].courts[0].id);
+        }
+      } catch (error) {
+        setError("Failed to fetch venues data");
+        console.error("Failed to fetch venues data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchVenuesData();
+  }, [userId]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">
+        Loading...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">
+        <div className="text-red-500">{error}</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Bookings</h1>
-          <p className="text-gray-600">Manage your court bookings</p>
-        </div>
-        <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-150 shadow-sm">
-          New Booking
-        </button>
-      </div>
-
-      <div className="space-y-6">
-        {courts.map((court) => (
-          <CourtTimetable
-            key={court}
-            courtName={court}
-            onBookingClick={setSelectedBooking}
-          />
-        ))}
-      </div>
-
-      {/* Booking Details Modal */}
-      {selectedBooking && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-96 max-w-lg mx-4">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Booking Details
-              </h3>
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-[1400px] mx-auto space-y-4">
+        {/* Header Section */}
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Booking Management
+              </h1>
+              <p className="text-sm text-gray-500">
+                Manage and view all court bookings
+              </p>
             </div>
-            <div className="p-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">
-                    Customer
-                  </label>
-                  <p className="mt-1 text-gray-900">
-                    {selectedBooking.customer}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">
-                    Email
-                  </label>
-                  <p className="mt-1 text-gray-900">{selectedBooking.email}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">
-                    Phone
-                  </label>
-                  <p className="mt-1 text-gray-900">{selectedBooking.phone}</p>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">
-                      Court
-                    </label>
-                    <p className="mt-1 text-gray-900">
-                      {selectedBooking.court}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">
-                      Day
-                    </label>
-                    <p className="mt-1 text-gray-900">{selectedBooking.day}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">
-                      Time
-                    </label>
-                    <p className="mt-1 text-gray-900">
-                      {selectedBooking.startTime}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">
-                      Duration
-                    </label>
-                    <p className="mt-1 text-gray-900">
-                      {selectedBooking.duration} hours
-                    </p>
-                  </div>
-                </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap items-center gap-2">
+              <AddBookingDialog venues={venuesDatas} />
+              <Button variant="outline">
+                <Filter className="mr-2 h-4 w-4" />
+                Filter
+              </Button>
+
+              <div className="flex rounded-lg border border-gray-200 bg-white">
+                <Button
+                  variant="ghost"
+                  className={`flex items-center gap-2 rounded-r-none ${
+                    viewMode === "calendar" ? "bg-gray-100" : ""
+                  }`}
+                  onClick={() => setViewMode("calendar")}
+                >
+                  <CalendarDays className="h-4 w-4" />
+                  <span className="hidden sm:inline">Calendar</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  className={`flex items-center gap-2 rounded-l-none border-l ${
+                    viewMode === "list" ? "bg-gray-100" : ""
+                  }`}
+                  onClick={() => setViewMode("list")}
+                >
+                  <List className="h-4 w-4" />
+                  <span className="hidden sm:inline">List</span>
+                </Button>
               </div>
             </div>
-            <div className="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end">
-              <button
-                className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-150"
-                onClick={() => setSelectedBooking(null)}
+          </div>
+
+          {/* Venue and Court Selection */}
+          <div className="flex flex-col sm:flex-row gap-4 bg-white p-4 rounded-lg border border-gray-200">
+            <div className="flex-1">
+              <label className="text-sm font-medium text-gray-500 mb-1.5 block">
+                Select Venue
+              </label>
+              <Select value={selectedVenue} onValueChange={handleVenueChange}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {venuesDatas.map((venue) => (
+                    <SelectItem key={venue.id} value={venue.id}>
+                      {venue.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex-1">
+              <label className="text-sm font-medium text-gray-500 mb-1.5 block">
+                Select Court
+              </label>
+              <Select
+                value={selectedCourt}
+                onValueChange={setSelectedCourt}
+                disabled={!currentVenue || !currentVenue.courts?.length}
               >
-                Close
-              </button>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {currentVenue?.courts?.map((court) => (
+                    <SelectItem key={court.id} value={court.id}>
+                      {court.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
-      )}
+
+        {/* Main Content */}
+        <Card className="bg-white shadow-sm">
+          {viewMode === "calendar" ? (
+            <CalendarView venueId={selectedVenue} courtId={selectedCourt} />
+          ) : (
+            <BookingManagementPage
+              venueId={selectedVenue}
+              courtId={selectedCourt}
+            />
+          )}
+        </Card>
+      </div>
     </div>
   );
 }
+
+export default MainBookingPage;

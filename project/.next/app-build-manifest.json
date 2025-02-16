@@ -11,6 +11,11 @@
       "static/chunks/main-app.js",
       "static/chunks/app/owner/[userId]/layout.js"
     ],
+    "/owner/[userId]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/owner/[userId]/page.js"
+    ],
     "/owner/[userId]/courts/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",

@@ -42,7 +42,7 @@ export function Sidebar() {
     <div className="h-screen w-64 bg-gray-900 text-white p-4">
       <div className="flex items-center gap-2 mb-8 px-2">
         <Court size={32} />
-        <span className="text-xl font-bold">CourtMaster</span>
+        <span className="text-xl font-bold">BookLap</span>
       </div>
       <nav>
         {menuItems.map((item) => {
