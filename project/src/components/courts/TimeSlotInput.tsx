@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { time_slot } from "@/types/types";
+import { time_slot } from "@/lib/types";
 
 // Generate hours for 24-hour format
 const hours = Array.from({ length: 24 }, (_, i) =>

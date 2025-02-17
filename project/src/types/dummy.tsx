@@ -37,16 +37,6 @@ export interface Venue {
 }
 
 // dummy-data.ts
-export const DUMMY_CUSTOMERS: Customer[] = [
-  { id: "1", name: "John Doe", email: "john@example.com", phone: "1234567890" },
-  {
-    id: "2",
-    name: "Jane Smith",
-    email: "jane@example.com",
-    phone: "0987654321"
-  },
-  { id: "3", name: "Bob Wilson", email: "bob@example.com", phone: "5555555555" }
-];
 
 export const DUMMY_COURT_PRICING: CourtPricing[] = [
   {

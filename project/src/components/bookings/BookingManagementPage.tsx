@@ -1,267 +1,362 @@
-"use client";
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   format,
   parseISO,
-  addWeeks,
-  startOfWeek,
-  endOfWeek,
   isWithinInterval,
-  isSameDay
+  startOfDay,
+  endOfDay
 } from "date-fns";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
-  ChevronLeft,
-  ChevronRight,
-  Calendar as CalendarIcon
-} from "lucide-react";
-import { getAllBookingAction } from "@/actions/bookingAction/getAllBookingAction";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { getAllBookingAction } from "@/services/booking/booking";
+import { Input } from "@/components/ui/input";
+import { Search, Calendar as CalendarIcon } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { DateRange } from "react-day-picker";
 
-const BookingManagementPage = (props: { venueId: string; courtId: string }) => {
+interface Booking {
+  id: string;
+  customer_id: string;
+  court_id: string;
+  start_time: string; // "2025-02-12 14:00:00" format
+  end_time: string; // "2025-02-12 17:00:00" format
+  created_at: string;
+  updated_at: string;
+  booking_status: "pending" | "confirmed" | "cancelled";
+  payment_status: "pending" | "confirmed" | "refunded";
+  total_amount: number;
+  is_recurring?: boolean;
+  recurring_end_date?: string | null;
+}
+
+const BookingList = (props: { venueId: string; courtId: string }) => {
   const { venueId, courtId } = props;
-  const [selectedDay, setSelectedDay] = useState("Monday");
-  const [currentWeek, setCurrentWeek] = useState(new Date());
-
-  // Sample data with multiple courts and bookings
-  const bookings = [
-    {
-      id: "1",
-      customer_id: "cust1",
-      court_id: "court1",
-      start_time: "2025-02-12 09:00:00",
-      end_time: "2025-02-12 11:00:00", // 2-hour booking
-      booking_status: "confirmed",
-      payment_status: "confirmed",
-      total_amount: 50
-    },
-    {
-      id: "2",
-      customer_id: "cust2",
-      court_id: "court1",
-      start_time: "2025-02-12 14:00:00",
-      end_time: "2025-02-12 17:00:00", // 3-hour booking
-      booking_status: "confirmed",
-      payment_status: "confirmed",
-      total_amount: 75
-    }
-  ];
-
-  const weekDays = [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday"
-  ];
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [showDialog, setShowDialog] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [date, setDate] = useState<DateRange | undefined>({
+    from: new Date(),
+    to: new Date()
+  });
 
   useEffect(() => {
-    //we will implement this later, fetch the bookings
     const getBookings = async () => {
-      console.log("Fetching bookings for court:", courtId);
-      const { data, error } = await getAllBookingAction(courtId);
-      if (error) console.error("Error fetching bookings:", error);
-      if (data) console.log("Fetched bookings:", data);
+      try {
+        const data = await getAllBookingAction(courtId);
+        if (data) {
+          setBookings(data);
+          setFilteredBookings(data);
+        }
+      } catch (error) {
+        console.error("Error in getBookings:", error);
+      }
     };
 
-    try {
+    if (courtId) {
       getBookings();
-    } catch (error) {
-      console.error("Error fetching bookings:", error);
     }
-  }, []);
+  }, [courtId]);
 
-  const handleNextWeek = () => setCurrentWeek(addWeeks(currentWeek, 1));
-  const handlePrevWeek = () => setCurrentWeek(addWeeks(currentWeek, -1));
-  const handleCurrentWeek = () => setCurrentWeek(new Date());
+  useEffect(() => {
+    let filtered = bookings;
 
-  // Group bookings by court
-  const groupedBookings = bookings.reduce((acc, booking) => {
-    if (!acc[booking.court_id]) {
-      acc[booking.court_id] = [];
+    // Apply date range filter
+    if (date?.from || date?.to) {
+      filtered = filtered.filter((booking) => {
+        const bookingDate = parseISO(booking.start_time.replace(" ", "T"));
+        if (date.from && date.to) {
+          return isWithinInterval(bookingDate, {
+            start: startOfDay(date.from),
+            end: endOfDay(date.to)
+          });
+        }
+        return true;
+      });
     }
-    acc[booking.court_id].push(booking);
-    return acc;
-  }, {});
 
-  const getStatusColor = (status) => {
-    const colors = {
-      confirmed: "bg-green-100 text-green-800",
-      pending: "bg-yellow-100 text-yellow-800",
-      cancelled: "bg-red-100 text-red-800",
-      refunded: "bg-gray-100 text-gray-800"
-    };
-    return colors[status] || "bg-gray-100 text-gray-800";
+    // Apply search term filter
+    if (searchTerm) {
+      filtered = filtered.filter((booking) =>
+        Object.values(booking).some((value) =>
+          value?.toString().toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
+    }
+
+    setFilteredBookings(filtered);
+  }, [searchTerm, bookings, date]);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "confirmed":
+        return "bg-green-100 text-green-800";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "cancelled":
+        return "bg-red-100 text-red-800";
+      case "refunded":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
   };
 
-  const filterBookingsByDay = (bookings, selectedDay) => {
-    const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
-    const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
-
-    return bookings.filter((booking) => {
-      const bookingDate = parseISO(booking.start_time);
-      const bookingDay = format(bookingDate, "EEEE");
-
-      // Check if booking is within the current week and matches selected day
-      return (
-        isWithinInterval(bookingDate, { start: weekStart, end: weekEnd }) &&
-        bookingDay === selectedDay
+  const formatDateTime = (dateTimeStr: string) => {
+    try {
+      return format(
+        parseISO(dateTimeStr.replace(" ", "T")),
+        "yyyy-MM-dd HH:mm:ss"
       );
-    });
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return dateTimeStr;
+    }
+  };
+
+  const handleBookingClick = (booking: Booking) => {
+    setSelectedBooking(booking);
+    setShowDialog(true);
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <h1 className="text-3xl font-bold">Booking Management</h1>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCurrentWeek}
-              className="flex items-center gap-2"
-            >
-              <CalendarIcon className="w-4 h-4" />
-              Current Week
-            </Button>
-            <div className="flex gap-1">
-              <Button variant="outline" size="icon" onClick={handlePrevWeek}>
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <Button variant="outline" size="icon" onClick={handleNextWeek}>
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
+    <div className="space-y-4 p-4">
+      {/* Search and Date Filter Bar */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+        <div className="relative flex-1 max-w-sm w-full">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
+          <Input
+            placeholder="Search bookings..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8"
+          />
         </div>
 
-        {/* Week indicator */}
-        <div className="text-sm text-gray-500 mb-4">
-          Week of{" "}
-          {format(
-            startOfWeek(currentWeek, { weekStartsOn: 1 }),
-            "MMMM d, yyyy"
-          )}
-        </div>
-
-        {/* Day selection tabs */}
-        <div className="flex space-x-1 mb-6 overflow-x-auto">
-          {weekDays.map((day) => {
-            const dayDate = weekDays.indexOf(day);
-            const currentDate = addWeeks(
-              startOfWeek(currentWeek, { weekStartsOn: 1 }),
-              0
-            );
-            currentDate.setDate(currentDate.getDate() + dayDate);
-
-            const isToday = isSameDay(currentDate, new Date());
-
-            return (
-              <button
-                key={day}
-                onClick={() => setSelectedDay(day)}
-                className={`px-4 py-2 rounded-lg whitespace-nowrap ${
-                  selectedDay === day
-                    ? "bg-blue-500 text-white"
-                    : isToday
-                    ? "bg-blue-50 hover:bg-blue-100"
-                    : "bg-gray-100 hover:bg-gray-200"
-                }`}
+        <div className="flex-shrink-0">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "justify-start text-left font-normal w-[300px]",
+                  !date && "text-muted-foreground"
+                )}
               >
-                <div>{day}</div>
-                <div className="text-xs">{format(currentDate, "MMM d")}</div>
-              </button>
-            );
-          })}
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {date?.from ? (
+                  date.to ? (
+                    <>
+                      {format(date.from, "LLL dd, y")} -{" "}
+                      {format(date.to, "LLL dd, y")}
+                    </>
+                  ) : (
+                    format(date.from, "LLL dd, y")
+                  )
+                ) : (
+                  <span>Pick a date</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                initialFocus
+                mode="range"
+                defaultMonth={date?.from}
+                selected={date}
+                onSelect={setDate}
+                numberOfMonths={2}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
-      <div className="space-y-6">
-        {Object.entries(groupedBookings).map(([courtId, courtBookings]) => {
-          const filteredBookings = filterBookingsByDay(
-            courtBookings,
-            selectedDay
-          );
-
-          if (filteredBookings.length === 0) {
-            return null; // Don't show empty courts
-          }
-
-          return (
-            <Card key={courtId} className="w-full">
-              <CardHeader>
-                <CardTitle>Court {courtId}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {filteredBookings.map((booking) => (
-                    <div
-                      key={booking.id}
-                      className="border rounded-lg p-4 space-y-2 hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-medium">Booking #{booking.id}</h3>
-                          <p className="text-sm text-gray-500">
-                            Customer ID: {booking.customer_id}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">${booking.total_amount}</p>
-                          <p className="text-sm text-gray-500">
-                            {format(parseISO(booking.start_time), "PPp")}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Badge
-                          variant="secondary"
-                          className={getStatusColor(booking.booking_status)}
-                        >
-                          {booking.booking_status}
-                        </Badge>
-                        <Badge
-                          variant="secondary"
-                          className={getStatusColor(booking.payment_status)}
-                        >
-                          {booking.payment_status}
-                        </Badge>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <p className="text-gray-500">Start Time</p>
-                          <p>{format(parseISO(booking.start_time), "PPp")}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">End Time</p>
-                          <p>{format(parseISO(booking.end_time), "PPp")}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-        {!Object.values(groupedBookings).some(
-          (courtBookings) =>
-            filterBookingsByDay(courtBookings, selectedDay).length > 0
-        ) && (
-          <div className="text-center p-8 bg-gray-50 rounded-lg">
-            <p className="text-gray-500">No bookings found for {selectedDay}</p>
-          </div>
-        )}
+      {/* Bookings Table */}
+      <div className="border rounded-lg overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Booking ID</TableHead>
+              <TableHead>Customer ID</TableHead>
+              <TableHead>Start Time</TableHead>
+              <TableHead>End Time</TableHead>
+              <TableHead>Booking Status</TableHead>
+              <TableHead>Payment Status</TableHead>
+              <TableHead>Total Amount</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredBookings.map((booking) => (
+              <TableRow key={booking.id}>
+                <TableCell className="font-medium">{booking.id}</TableCell>
+                <TableCell>{booking.customer_id}</TableCell>
+                <TableCell>{formatDateTime(booking.start_time)}</TableCell>
+                <TableCell>{formatDateTime(booking.end_time)}</TableCell>
+                <TableCell>
+                  <span
+                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                      booking.booking_status
+                    )}`}
+                  >
+                    {booking.booking_status}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <span
+                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                      booking.payment_status
+                    )}`}
+                  >
+                    {booking.payment_status}
+                  </span>
+                </TableCell>
+                <TableCell>${booking.total_amount}</TableCell>
+                <TableCell>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBookingClick(booking)}
+                  >
+                    View Details
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
+
+      {/* Booking Details Dialog */}
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Booking Details</DialogTitle>
+          </DialogHeader>
+          {selectedBooking && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">
+                    Booking ID
+                  </label>
+                  <p className="mt-1">{selectedBooking.id}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">
+                    Customer ID
+                  </label>
+                  <p className="mt-1">{selectedBooking.customer_id}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">
+                    Court ID
+                  </label>
+                  <p className="mt-1">{selectedBooking.court_id}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">
+                    Total Amount
+                  </label>
+                  <p className="mt-1">${selectedBooking.total_amount}</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-500">
+                  Time
+                </label>
+                <p className="mt-1">
+                  {formatDateTime(selectedBooking.start_time)} -{" "}
+                  {formatDateTime(selectedBooking.end_time)}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">
+                    Booking Status
+                  </label>
+                  <p
+                    className={`mt-1 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                      selectedBooking.booking_status
+                    )}`}
+                  >
+                    {selectedBooking.booking_status}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">
+                    Payment Status
+                  </label>
+                  <p
+                    className={`mt-1 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                      selectedBooking.payment_status
+                    )}`}
+                  >
+                    {selectedBooking.payment_status}
+                  </p>
+                </div>
+              </div>
+
+              {selectedBooking.is_recurring && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">
+                    Recurring Booking
+                  </label>
+                  <p className="mt-1">
+                    Ends on:{" "}
+                    {selectedBooking.recurring_end_date
+                      ? formatDateTime(selectedBooking.recurring_end_date)
+                      : "No end date"}
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <label className="text-sm font-medium text-gray-500">
+                  Created At
+                </label>
+                <p className="mt-1">
+                  {formatDateTime(selectedBooking.created_at)}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-500">
+                  Updated At
+                </label>
+                <p className="mt-1">
+                  {formatDateTime(selectedBooking.updated_at)}
+                </p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
-export default BookingManagementPage;
+export default BookingList;

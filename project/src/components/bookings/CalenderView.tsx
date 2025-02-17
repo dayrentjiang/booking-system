@@ -21,59 +21,37 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { getAllBookingAction } from "@/actions/bookingAction/getAllBookingAction";
-import { get } from "http";
+import { getAllBookingAction } from "@/services/booking/booking";
+import { Booking } from "@/lib/types";
 
 const CalendarView = (props: { venueId: string; courtId: string }) => {
   const { venueId, courtId } = props;
-  // BookingData.js
-  const bookingsData = [
-    {
-      id: "1",
-      customer_id: "cust1",
-      court_id: "court1",
-      start_time: "2025-02-12 09:00:00",
-      end_time: "2025-02-12 11:00:00", // 2-hour booking
-      booking_status: "confirmed",
-      payment_status: "confirmed",
-      total_amount: 50
-    },
-    {
-      id: "2",
-      customer_id: "cust2",
-      court_id: "court1",
-      start_time: "2025-02-12 14:00:00",
-      end_time: "2025-02-12 17:00:00", // 3-hour booking
-      booking_status: "confirmed",
-      payment_status: "confirmed",
-      total_amount: 75
-    }
-  ];
   const [currentWeek, setCurrentWeek] = useState(new Date());
-  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [showDialog, setShowDialog] = useState(false);
-  const [bookings] = useState(bookingsData);
+  const [bookings, setBookings] = useState<Booking[]>([]);
 
   useEffect(() => {
-    //we will implement this later, fetch the bookings
     const getBookings = async () => {
-      console.log("Fetching bookings for court:", courtId);
-      const { data, error } = await getAllBookingAction(courtId);
-      if (error) console.error("Error fetching bookings:", error);
-      if (data) console.log("Fetched bookings:", data);
+      try {
+        const data = await getAllBookingAction(courtId);
+        if (data) {
+          setBookings(data);
+        }
+      } catch (error) {
+        console.error("Error in getBookings:", error);
+      }
     };
 
-    try {
+    if (courtId) {
       getBookings();
-    } catch (error) {
-      console.error("Error fetching bookings:", error);
     }
-  }, []);
+  }, [courtId]);
 
   const hours = Array.from({ length: 19 }, (_, i) => i + 6);
-  const HOUR_HEIGHT = 50;
+  const HOUR_HEIGHT = 60; // Increased height for better visibility
 
-  const getDaysInWeek = (startDate) => {
+  const getDaysInWeek = (startDate: Date) => {
     return Array.from({ length: 7 }, (_, i) => addDays(startDate, i));
   };
 
@@ -81,27 +59,132 @@ const CalendarView = (props: { venueId: string; courtId: string }) => {
   const weekDays = getDaysInWeek(weekStart);
   const today = new Date();
 
-  const getBookingPosition = (booking) => {
-    const startTime = parseISO(booking.start_time);
-    const endTime = parseISO(booking.end_time);
-    const startHour = startTime.getHours();
-    const bookingDate = format(startTime, "yyyy-MM-dd");
-    const duration = differenceInHours(endTime, startTime);
+  // Function to extract hours and minutes from time string
+  const getTimeComponents = (timeStr: string | null | undefined) => {
+    if (!timeStr) {
+      console.error("Invalid time string:", timeStr);
+      return { hours: 0, minutes: 0 };
+    }
 
-    return {
-      startHour,
-      duration,
-      bookingDate,
-      height: duration * HOUR_HEIGHT
-    };
+    try {
+      let timePart: string;
+
+      if (timeStr.includes("T")) {
+        // Handle ISO format
+        timePart = timeStr.split("T")[1].substring(0, 5); // Get HH:mm
+      } else {
+        // Handle space-separated format
+        timePart = timeStr.split(" ")[1].substring(0, 5); // Get HH:mm
+      }
+
+      const [hours, minutes] = timePart.split(":").map(Number);
+
+      return {
+        hours: isNaN(hours) ? 0 : hours,
+        minutes: isNaN(minutes) ? 0 : minutes
+      };
+    } catch (error) {
+      console.error("Error parsing time:", timeStr, error);
+      return { hours: 0, minutes: 0 };
+    }
+  };
+
+  const getBookingPosition = (booking: Booking) => {
+    if (!booking || !booking.start_time || !booking.end_time) {
+      console.error("Invalid booking:", booking);
+      return {
+        startHour: 0,
+        duration: 0,
+        bookingDate: "",
+        height: 0
+      };
+    }
+
+    try {
+      const startComponents = getTimeComponents(booking.start_time);
+      const endComponents = getTimeComponents(booking.end_time);
+      const startHour = startComponents.hours + startComponents.minutes / 60;
+      const endHour = endComponents.hours + endComponents.minutes / 60;
+      const duration = endHour - startHour;
+
+      // Extract date part from either ISO or space-separated format
+      const bookingDate = booking.start_time.includes("T")
+        ? booking.start_time.split("T")[0]
+        : booking.start_time.split(" ")[0];
+
+      return {
+        startHour,
+        duration,
+        bookingDate,
+        height: Math.max(duration * HOUR_HEIGHT, 0) // Ensure non-negative height
+      };
+    } catch (error) {
+      console.error("Error calculating booking position:", error);
+      return {
+        startHour: 0,
+        duration: 0,
+        bookingDate: "",
+        height: 0
+      };
+    }
   };
 
   const handleNextWeek = () => setCurrentWeek(addWeeks(currentWeek, 1));
   const handlePrevWeek = () => setCurrentWeek(addWeeks(currentWeek, -1));
   const handleToday = () => setCurrentWeek(new Date());
-  const handleBookingClick = (booking) => {
+  const handleBookingClick = (booking: Booking) => {
     setSelectedBooking(booking);
     setShowDialog(true);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "confirmed":
+        return "bg-green-100 text-green-800";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "cancelled":
+        return "bg-red-100 text-red-800";
+      case "refunded":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  // Function to format time without timezone conversion
+  const formatTimeDisplay = (timeStr: string | null | undefined) => {
+    if (!timeStr) {
+      console.error("Invalid time string:", timeStr);
+      return "";
+    }
+
+    try {
+      let timePart: string;
+
+      if (timeStr.includes("T")) {
+        // Handle ISO format
+        timePart = timeStr.split("T")[1].substring(0, 5); // Get HH:mm
+      } else {
+        // Handle space-separated format
+        timePart = timeStr.split(" ")[1].substring(0, 5); // Get HH:mm
+      }
+
+      const [hours, minutes] = timePart.split(":");
+      const hour = parseInt(hours, 10);
+
+      if (isNaN(hour)) {
+        console.error("Invalid hour:", hours);
+        return "";
+      }
+
+      const ampm = hour >= 12 ? "PM" : "AM";
+      const hour12 = hour % 12 || 12;
+      return `${hour12}:${minutes} ${ampm}`;
+    } catch (error) {
+      console.error("Error formatting time:", timeStr, error);
+      return "";
+    }
   };
 
   return (
@@ -160,7 +243,7 @@ const CalendarView = (props: { venueId: string; courtId: string }) => {
             {hours.map((hour) => (
               <div key={hour} className="grid grid-cols-8 border-b">
                 <div className="p-2 border-r text-sm sticky left-0 bg-gray-50">
-                  {format(new Date().setHours(hour, 0), "h:mm a")}
+                  {`${hour % 12 || 12}:00 ${hour >= 12 ? "PM" : "AM"}`}
                 </div>
                 {weekDays.map((day) => (
                   <div
@@ -189,21 +272,29 @@ const CalendarView = (props: { venueId: string; courtId: string }) => {
                   <div
                     key={booking.id}
                     onClick={() => handleBookingClick(booking)}
-                    className="absolute left-0 right-0 m-1 text-sm bg-blue-100 border border-blue-300 rounded-md cursor-pointer hover:bg-blue-200 transition-colors"
+                    className={`absolute left-0 right-0 mx-0 text-sm border rounded-md cursor-pointer hover:opacity-80 transition-colors ${
+                      booking.booking_status === "confirmed"
+                        ? "bg-blue-100 border-blue-300"
+                        : booking.booking_status === "pending"
+                        ? "bg-yellow-100 border-yellow-300"
+                        : "bg-red-100 border-red-300"
+                    }`}
                     style={{
                       top: `${topPosition}px`,
-                      height: `${height}px`,
+                      height: `${height - 2}px`, // Subtract 2px for borders
                       left: `${(dayIndex + 1) * (100 / 8)}%`,
-                      right: `${100 - (dayIndex + 2) * (100 / 8)}%`
+                      right: `${100 - (dayIndex + 2) * (100 / 8)}%`,
+                      borderTop: "1px solid",
+                      borderBottom: "1px solid"
                     }}
                   >
                     <div className="p-2 h-full overflow-hidden">
-                      <div className="font-medium text-blue-700">
+                      <div className="font-medium">
                         Customer {booking.customer_id}
                       </div>
-                      <div className="text-xs text-blue-600">
-                        {format(parseISO(booking.start_time), "h:mm a")} -
-                        {format(parseISO(booking.end_time), "h:mm a")}
+                      <div className="text-xs">
+                        {formatTimeDisplay(booking.start_time)} -
+                        {formatTimeDisplay(booking.end_time)}
                       </div>
                     </div>
                   </div>
@@ -254,8 +345,7 @@ const CalendarView = (props: { venueId: string; courtId: string }) => {
                   Time
                 </label>
                 <p className="mt-1">
-                  {format(parseISO(selectedBooking.start_time), "PPp")} -{" "}
-                  {format(parseISO(selectedBooking.end_time), "p")}
+                  {selectedBooking.start_time} - {selectedBooking.end_time}
                 </p>
               </div>
 
@@ -264,7 +354,11 @@ const CalendarView = (props: { venueId: string; courtId: string }) => {
                   <label className="text-sm font-medium text-gray-500">
                     Booking Status
                   </label>
-                  <p className="mt-1 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  <p
+                    className={`mt-1 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                      selectedBooking.booking_status
+                    )}`}
+                  >
                     {selectedBooking.booking_status}
                   </p>
                 </div>
@@ -272,11 +366,27 @@ const CalendarView = (props: { venueId: string; courtId: string }) => {
                   <label className="text-sm font-medium text-gray-500">
                     Payment Status
                   </label>
-                  <p className="mt-1 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  <p
+                    className={`mt-1 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                      selectedBooking.payment_status
+                    )}`}
+                  >
                     {selectedBooking.payment_status}
                   </p>
                 </div>
               </div>
+
+              {selectedBooking.is_recurring && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">
+                    Recurring Booking
+                  </label>
+                  <p className="mt-1">
+                    Ends on:{" "}
+                    {selectedBooking.recurring_end_date || "No end date"}
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

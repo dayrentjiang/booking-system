@@ -1,7 +1,7 @@
 "use client";
 
 import { Calendar, DollarSign, Users } from "lucide-react";
-import { User } from "@/types/types";
+import { User } from "@/lib/types";
 import { useEffect, useState } from "react";
 
 interface StatCardProps {

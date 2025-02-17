@@ -1,5 +1,5 @@
 import CourtsPage from "@/components/courts/CourtPage";
-import { getOwnerVenue } from "@/actions/getOwnerVenue";
+import { getOwnerVenue } from "@/services/owner/getOwnerAction";
 
 export default async function CourtPage({
   params

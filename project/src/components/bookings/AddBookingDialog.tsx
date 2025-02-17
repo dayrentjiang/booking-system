@@ -16,40 +16,48 @@ import { BookingSummary } from "./bookingDialogsComponent/BookingSummary";
 import {
   Venue,
   DUMMY_COURT_PRICING,
-  DUMMY_EXISTING_BOOKINGS,
-  Customer
+  DUMMY_EXISTING_BOOKINGS
 } from "@/types/dummy";
 import { format } from "date-fns";
+import { addNewBooking } from "@/app/actions/booking/bookingAction";
+import { BookingFormData } from "@/types/interface";
 
 interface AddBookingDialogProps {
   venues: Venue[];
 }
+
 const AddBookingDialog: React.FC<AddBookingDialogProps> = ({ venues }) => {
-  // State management
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedVenue, setSelectedVenue] = useState<string>("");
-  const [selectedCourt, setSelectedCourt] = useState<string>("");
-  const [selectedCustomer, setSelectedCustomer] = useState<string>("");
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [isRecurring, setIsRecurring] = useState(false);
-  const [recurringEndDate, setRecurringEndDate] = useState<Date | null>(null);
-  const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>([]);
-  const [estimatedPrice, setEstimatedPrice] = useState<number>(0);
+  const [bookingData, setBookingData] = useState<BookingFormData>({
+    customerInfo: {
+      name: "",
+      email: "",
+      phone: ""
+    },
+    venueId: "",
+    courtId: "",
+    date: null,
+    isRecurring: false,
+    recurringEndDate: null,
+    timeSlots: [],
+    estimatedPrice: 0
+  });
+
   const [availabilityMessage, setAvailabilityMessage] = useState<string>("");
 
-  // Utility functions
   const isTimeSlotAvailable = (timeSlot: string) => {
-    if (!selectedDate || !selectedCourt) return true;
+    if (!bookingData.date || !bookingData.courtId) return true;
 
     const [start, end] = timeSlot.split("-");
     const bookingStart = new Date(
-      `${format(selectedDate, "yyyy-MM-dd")}T${start}`
+      `${format(bookingData.date, "yyyy-MM-dd")}T${start}`
     );
-    const bookingEnd = new Date(`${format(selectedDate, "yyyy-MM-dd")}T${end}`);
+    const bookingEnd = new Date(
+      `${format(bookingData.date, "yyyy-MM-dd")}T${end}`
+    );
 
     return !DUMMY_EXISTING_BOOKINGS.some((booking) => {
-      if (booking.court_id !== selectedCourt) return false;
-
+      if (booking.court_id !== bookingData.courtId) return false;
       const existingStart = new Date(booking.start_time);
       const existingEnd = new Date(booking.end_time);
 
@@ -62,105 +70,100 @@ const AddBookingDialog: React.FC<AddBookingDialogProps> = ({ venues }) => {
   };
 
   const calculatePrice = () => {
-    if (!selectedDate || !selectedCourt || !selectedTimeSlots.length) return 0;
+    if (
+      !bookingData.date ||
+      !bookingData.courtId ||
+      !bookingData.timeSlots.length
+    )
+      return 0;
 
-    // Determine day type
     const dayType =
-      selectedDate.getDay() === 0 || selectedDate.getDay() === 6
+      bookingData.date.getDay() === 0 || bookingData.date.getDay() === 6
         ? "weekend"
         : "weekday";
 
-    // Get all pricing rules for this court and day type
     const pricing = DUMMY_COURT_PRICING.filter(
-      (price) => price.court_id === selectedCourt && price.day_type === dayType
+      (price) =>
+        price.court_id === bookingData.courtId && price.day_type === dayType
     );
 
     let totalPrice = 0;
-
-    // Sort time slots to ensure proper order
-    const sortedTimeSlots = [...selectedTimeSlots].sort();
+    const sortedTimeSlots = [...bookingData.timeSlots].sort();
 
     sortedTimeSlots.forEach((slot) => {
       const [slotStart, slotEnd] = slot.split("-");
-
-      // Find the applicable pricing rule for this time slot
       const applicablePricing = pricing.find((price) => {
-        // Convert times to comparable format (24-hour)
-        const priceStart = price.start_time;
-        const priceEnd = price.end_time;
-
-        // Check if the slot falls within this pricing period
-        return slotStart >= priceStart && slotEnd <= priceEnd;
+        return slotStart >= price.start_time && slotEnd <= price.end_time;
       });
 
       if (applicablePricing) {
-        // Add the rate for this hour
         totalPrice += parseFloat(applicablePricing.rate);
-      } else {
-        console.warn(`No pricing rule found for slot ${slot} on ${dayType}`);
       }
     });
 
     return totalPrice;
   };
 
-  // Event handlers
   const handleTimeSlotSelect = (timeSlot: string) => {
-    if (!selectedDate || !selectedCourt) {
+    if (!bookingData.date || !bookingData.courtId) {
       setAvailabilityMessage("Please select a date and court first");
       return;
     }
 
-    setSelectedTimeSlots((prev) => {
-      const newSlots = prev.includes(timeSlot)
-        ? prev.filter((slot) => slot !== timeSlot)
-        : [...prev, timeSlot].sort();
+    setBookingData((prev) => {
+      const newTimeSlots = prev.timeSlots.includes(timeSlot)
+        ? prev.timeSlots.filter((slot) => slot !== timeSlot)
+        : [...prev.timeSlots, timeSlot].sort();
 
-      // Update estimated price
-      const price = calculatePrice();
-      setEstimatedPrice(price);
-
-      return newSlots;
+      return {
+        ...prev,
+        timeSlots: newTimeSlots,
+        estimatedPrice: calculatePrice()
+      };
     });
-
     setAvailabilityMessage("");
   };
 
-  const handleNewCustomerAdd = (
-    customerData: Omit<Customer, "id" | "created_at" | "updated_at">
-  ) => {
-    const newCustomerId = `new_${Date.now()}`;
-    console.log("Adding new customer:", { id: newCustomerId, ...customerData });
-    setSelectedCustomer(newCustomerId);
-  };
-
-  const handleSubmit = () => {
-    // Generate bookings logic here
-    console.log("Creating booking with:", {
-      customer: selectedCustomer,
-      venue: selectedVenue,
-      court: selectedCourt,
-      date: selectedDate,
-      timeSlots: selectedTimeSlots,
-      isRecurring,
-      recurringEndDate,
-      estimatedPrice
-    });
-
-    setIsOpen(false);
-    resetForm();
+  const handleSubmit = async () => {
+    try {
+      console.log("Creating booking:", bookingData);
+      await addNewBooking(bookingData);
+      setIsOpen(false);
+      resetForm();
+    } catch (error) {
+      console.error("Error creating booking:", error);
+    }
   };
 
   const resetForm = () => {
-    setSelectedVenue("");
-    setSelectedCourt("");
-    setSelectedCustomer("");
-    setSelectedDate(null);
-    setIsRecurring(false);
-    setRecurringEndDate(null);
-    setSelectedTimeSlots([]);
-    setEstimatedPrice(0);
+    setBookingData({
+      customerInfo: {
+        name: "",
+        email: "",
+        phone: ""
+      },
+      venueId: "",
+      courtId: "",
+      date: null,
+      isRecurring: false,
+      recurringEndDate: null,
+      timeSlots: [],
+      estimatedPrice: 0
+    });
     setAvailabilityMessage("");
+  };
+
+  const isFormValid = () => {
+    return (
+      bookingData.customerInfo.name &&
+      bookingData.customerInfo.email &&
+      bookingData.customerInfo.phone &&
+      bookingData.venueId &&
+      bookingData.courtId &&
+      bookingData.date &&
+      bookingData.timeSlots.length > 0 &&
+      (!bookingData.isRecurring || bookingData.recurringEndDate)
+    );
   };
 
   return (
@@ -175,41 +178,51 @@ const AddBookingDialog: React.FC<AddBookingDialogProps> = ({ venues }) => {
         <DialogHeader>
           <DialogTitle>Create New Booking</DialogTitle>
         </DialogHeader>
-
         <div className="space-y-6">
           <CustomerSelection
-            selectedCustomer={selectedCustomer}
-            onCustomerSelect={setSelectedCustomer}
-            onNewCustomerAdd={handleNewCustomerAdd}
+            customerInfo={bookingData.customerInfo}
+            onCustomerInfoChange={(info) =>
+              setBookingData((prev) => ({ ...prev, customerInfo: info }))
+            }
           />
 
           <VenueCourtSelection
             venues={venues}
-            selectedVenue={selectedVenue}
-            selectedCourt={selectedCourt}
-            onVenueSelect={setSelectedVenue}
-            onCourtSelect={setSelectedCourt}
+            selectedVenue={bookingData.venueId}
+            selectedCourt={bookingData.courtId}
+            onVenueSelect={(id) =>
+              setBookingData((prev) => ({ ...prev, venueId: id, courtId: "" }))
+            }
+            onCourtSelect={(id) =>
+              setBookingData((prev) => ({ ...prev, courtId: id }))
+            }
           />
 
           <DateTimeSelection
-            selectedDate={selectedDate}
-            isRecurring={isRecurring}
-            recurringEndDate={recurringEndDate}
-            selectedTimeSlots={selectedTimeSlots}
+            selectedDate={bookingData.date}
+            isRecurring={bookingData.isRecurring}
+            recurringEndDate={bookingData.recurringEndDate}
+            selectedTimeSlots={bookingData.timeSlots}
             availabilityMessage={availabilityMessage}
-            onDateSelect={setSelectedDate}
-            onRecurringChange={setIsRecurring}
-            onRecurringEndDateSelect={setRecurringEndDate}
+            onDateSelect={(date) =>
+              setBookingData((prev) => ({ ...prev, date }))
+            }
+            onRecurringChange={(isRecurring) =>
+              setBookingData((prev) => ({ ...prev, isRecurring }))
+            }
+            onRecurringEndDateSelect={(date) =>
+              setBookingData((prev) => ({ ...prev, recurringEndDate: date }))
+            }
             onTimeSlotSelect={handleTimeSlotSelect}
             isTimeSlotAvailable={isTimeSlotAvailable}
           />
 
           <BookingSummary
-            selectedTimeSlots={selectedTimeSlots}
-            selectedDate={selectedDate}
-            selectedCourt={selectedCourt}
-            isRecurring={isRecurring}
-            recurringEndDate={recurringEndDate}
+            selectedTimeSlots={bookingData.timeSlots}
+            selectedDate={bookingData.date}
+            selectedCourt={bookingData.courtId}
+            isRecurring={bookingData.isRecurring}
+            recurringEndDate={bookingData.recurringEndDate}
           />
 
           <div className="flex justify-end space-x-4">
@@ -222,17 +235,7 @@ const AddBookingDialog: React.FC<AddBookingDialogProps> = ({ venues }) => {
             >
               Cancel
             </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={
-                !selectedVenue ||
-                !selectedCourt ||
-                !selectedDate ||
-                !selectedTimeSlots.length ||
-                !selectedCustomer ||
-                (isRecurring && !recurringEndDate)
-              }
-            >
+            <Button onClick={handleSubmit} disabled={!isFormValid()}>
               Create Booking
             </Button>
           </div>

@@ -3,9 +3,9 @@
 import React from "react";
 import { useState } from "react";
 import { useParams } from "next/navigation";
-import { addCourtAction } from "@/actions/courtAction/addCourtAction";
-import { getOwnerVenue } from "@/actions/getOwnerVenue";
-import { Venue, Court } from "@/types/types";
+import { addCourtAction } from "@/app/actions/court/addCourtAction";
+import { getOwnerVenue } from "@/services/owner/getOwnerAction";
+import { Venue, Court } from "@/lib/types";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { Plus, Edit, Trash } from "lucide-react";
 import { VenueCard } from "./VenueCard";
 
 import { AddVenueDialog } from "./AddVenueDialog";
-import { addVenueAction } from "@/actions/courtAction/addVenueAction";
+import { addVenueAction } from "@/services/venue/addVenueAction";
 import { add } from "date-fns";
 
 // Main Page Component

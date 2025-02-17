@@ -2,13 +2,13 @@ import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { getCourtAction } from "@/actions/courtAction/getCourtAction";
-import { addCourtAction } from "@/actions/courtAction/addCourtAction";
-import { getSportType } from "@/actions/courtAction/getSportType";
+import { getCourtAction } from "@/services/court/getCourtAction";
+import { addCourtAction } from "@/app/actions/court/addCourtAction";
+import { getSportType } from "@/services/sportType/getSportType";
 import CourtCard from "@/components/courts/CourtCard";
 import React from "react";
 import AddCourtDialog from "@/components/courts/AddCourtDialog";
-import { Venue, Court } from "@/types/types";
+import { Venue, Court } from "@/lib/types";
 
 interface VenueCardProps {
   venue: Venue;

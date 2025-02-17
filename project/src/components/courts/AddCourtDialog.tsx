@@ -17,7 +17,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Trash2, Plus } from "lucide-react";
-import { sport_type, time_slot } from "@/types/types";
+import { sport_type, time_slot } from "@/lib/types";
 import TimeSlotInput from "./TimeSlotInput"; // Import the TimeSlotInput component
 
 interface PricingSchedule {

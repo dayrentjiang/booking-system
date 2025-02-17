@@ -1,6 +1,6 @@
 import { DashboardOverview } from "@/components/DashboardOverview";
 import { auth } from "@clerk/nextjs/server";
-import { getOwnerAction } from "@/actions/getOwnerAction";
+import { getOwnerAction } from "@/services/owner/getOwnerAction";
 import { useState } from "react";
 
 export default async function OwnerDashboard() {

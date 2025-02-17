@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { getVenuesWithCourt } from "@/actions/bookingAction/getVenuesWithCourt";
+import { getVenuesWithCourt } from "@/services/booking/booking";
 import { useParams } from "next/navigation";
 import AddBookingDialog from "@/components/bookings/AddBookingDialog";
 

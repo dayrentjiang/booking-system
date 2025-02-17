@@ -12,12 +12,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Venue, Court } from "@/types/types";
-import { getSportType } from "@/actions/courtAction/getSportType";
-import { deleteCourtAction } from "@/actions/courtAction/deleteCourtAction";
-import { getCourtPricing } from "@/actions/courtAction/getCourtPricing";
-import { updateCourtStatusAction } from "@/actions/courtAction/updateCourtStatusAction";
-import { editCourtAction } from "@/actions/courtAction/editCourtAction";
+import { Venue, Court } from "@/lib/types";
+import { getSportType } from "@/services/sportType/getSportType";
+import { deleteCourtAction } from "@/services/court/deleteCourtAction";
+import { getCourtPricing } from "@/services/courtPricing/getCourtPricing";
+import { updateCourtStatusAction } from "@/services/court/updateCourtStatusAction";
+import { editCourtAction } from "@/services/court/editCourtAction";
 import {
   Select,
   SelectContent,
